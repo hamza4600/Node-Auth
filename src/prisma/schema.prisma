@@ -15,3 +15,12 @@ model User {
   email    String @unique
   password String
 }
+
+model TechnologyEntity {
+  description String?
+  displayName String  @unique
+  id          Int     @id @default(autoincrement())
+  url         String?
+
+  @@map("technology")
+}
