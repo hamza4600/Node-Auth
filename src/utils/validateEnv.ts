@@ -4,6 +4,7 @@ export const ValidateEnv = () => {
   cleanEnv(process.env, {
     NODE_ENV: str(),
     PORT: port(),
-    // add more environment variables here
+    REDIS_URL: str(),
+    DATABASE_URL: str(),
   });
 };

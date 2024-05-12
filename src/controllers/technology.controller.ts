@@ -1,5 +1,7 @@
+import { TechService } from '@/services/teach.service';
 import { CacheAPIWrapper } from './../cache/cache-api-wrapper.d';
 import { PrismaClient, Prisma, TechnologyEntity } from '@prisma/client';
+import { Container } from 'typedi';
 
 type TechnologyEntityId = TechnologyEntity['id'];
 
@@ -10,6 +12,8 @@ export type TechnologyEntityCollectionPage = {
 
 export class TechnologyDataSource {
   constructor(private prismaClient: PrismaClient, private cacheAPIWrapper?: CacheAPIWrapper<TechnologyEntity>) {}
+
+  public tech = Container.get(TechService);
 
   async getTechnologyById(id: TechnologyEntityId): Promise<TechnologyEntity | null> {
     let entity = await this.cacheAPIWrapper?.getCached(id);

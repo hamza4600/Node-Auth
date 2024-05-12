@@ -27,19 +27,27 @@ export const onRedisClientReady: (...args: unknown[]) => void = () => {
   console.log('Redis connected.');
 };
 
+const redisConfig = {
+  password: 'NRpDMFNgvq6Ufbx0BgDwle1FXqxqMpYR',
+  socket: {
+    host: 'redis-14991.c302.asia-northeast1-1.gce.redns.redis-cloud.com',
+    port: 14991,
+  },
+};
+
 export const connectRedisClient = async (url: string, maxReconnectRetries = 5): Promise<RedisClient | undefined> => {
   const existingClient = clientInstances[url];
 
   if (existingClient) {
     return existingClient;
   }
-
-  const client = createClient<RedisModules, RedisFunctions, RedisScripts>({
-    url,
-    socket: {
-      reconnectStrategy: createReconnectStrategy(maxReconnectRetries),
-    },
-  });
+  const client = createClient(redisConfig);
+  // const client = createClient<RedisModules, RedisFunctions, RedisScripts>({
+  //   url,
+  //   socket: {
+  //     reconnectStrategy: createReconnectStrategy(maxReconnectRetries),
+  //   },
+  // });
 
   client.on('error', onRedisClientError);
 

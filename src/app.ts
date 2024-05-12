@@ -12,12 +12,7 @@ import { NODE_ENV, PORT, LOG_FORMAT, ORIGIN, CREDENTIALS } from '@config';
 import { Routes } from '@interfaces/routes.interface';
 import { ErrorMiddleware } from '@middlewares/error.middleware';
 import { logger, stream } from '@utils/logger';
-// import { connectRedisClient } from './cache/redis';
 
-// const REDIS_URL = process.env.REDIS_URL;
-// if (!REDIS_URL) {
-//   throw new Error(`[Invalid environment] Variable not found: REDIS_URL`);
-// }
 export class App {
   public app: express.Application;
   public env: string;
@@ -34,17 +29,14 @@ export class App {
     this.initializeErrorHandling();
   }
 
-  public async listen() {
-    // const redisClient = await connectRedisClient(REDIS_URL);
-    // if (!redisClient) {
-    //   throw new Error('Cannot connect to Redis.');
-    // }
-    this.app.listen(this.port, () => {
-      logger.info(`=================================`);
-      logger.info(`======= ENV: ${this.env} =======`);
-      logger.info(`🚀 App listening on the port ${this.port}`);
-      logger.info(`=================================`);
-    });
+  public listen() {
+    this.app.listen(this.port);
+    // this.app.listen(this.port, () => {
+    //   logger.info(`=================================`);
+    //   logger.info(`======= ENV: ${this.env} =======`);
+    //   logger.info(`🚀 App listening on the port ${this.port}`);
+    //   logger.info(`=================================`);
+    // });
   }
 
   public getServer() {
