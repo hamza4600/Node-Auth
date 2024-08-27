@@ -19,7 +19,7 @@ export class TechService {
   }
 
   public async createTech(techData: any): Promise<any> {
-    const findTech: any = await this.tech.findUnique({ where: { name: techData.name } });
+    const findTech: any = await this.tech.findUnique({ where: { displayName: techData.name } });
     if (findTech) throw new HttpException(409, `This tech ${techData.name} already exists`);
 
     const createTechData: any = await this.tech.create({ data: { ...techData } });
