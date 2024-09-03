@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { Service } from 'typedi';
-import { HttpException } from '@/exceptions/httpException';
+import { HttpException } from '@/exceptions/HttpException';
 
 @Service()
 export class TechService {

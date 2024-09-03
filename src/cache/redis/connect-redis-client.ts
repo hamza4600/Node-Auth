@@ -28,10 +28,10 @@ export const onRedisClientReady: (...args: unknown[]) => void = () => {
 };
 
 const redisConfig = {
-  password: 'NRpDMFNgvq6Ufbx0BgDwle1FXqxqMpYR',
+  password: process.env.REDIS_PASSWORD,
   socket: {
-    host: 'redis-14991.c302.asia-northeast1-1.gce.redns.redis-cloud.com',
-    port: 14991,
+    host: process.env.REDIS_HOST,
+     port: Number(process.env.REDIS_PORT),
   },
 };
 

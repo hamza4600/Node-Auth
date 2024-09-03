@@ -4,7 +4,7 @@ import { sign } from 'jsonwebtoken';
 import { Service } from 'typedi';
 import { SECRET_KEY } from '@config';
 import { CreateUserDto } from '@dtos/users.dto';
-import { HttpException } from '@exceptions/httpException';
+import { HttpException } from '@exceptions/HttpException';
 import { DataStoredInToken, TokenData } from '@interfaces/auth.interface';
 import { User } from '@interfaces/users.interface';
 
@@ -43,7 +43,7 @@ export class AuthService {
   }
 
   public createToken(user: User): TokenData {
-    const dataStoredInToken: DataStoredInToken = { id: user.id };
+    const dataStoredInToken: DataStoredInToken = { id: Number(user.id) };
     const secretKey: string = SECRET_KEY;
     const expiresIn: number = 60 * 60;
 
