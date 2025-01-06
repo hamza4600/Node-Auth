@@ -1,9 +1,9 @@
 import { PrismaClient } from '@prisma/client';
 import { NextFunction, Response } from 'express';
 import { verify } from 'jsonwebtoken';
-import { SECRET_KEY } from '@config';
-import { HttpException } from '@exceptions/HttpException';
-import { DataStoredInToken, RequestWithUser } from '@interfaces/auth.interface';
+import { SECRET_KEY } from '../config';
+import { HttpException } from '../exceptions/HttpException';
+import { DataStoredInToken, RequestWithUser } from '../interfaces/auth.interface';
 
 const getAuthorization = (req: any) => {
   const coockie = req.cookies['Authorization'];

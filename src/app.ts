@@ -8,10 +8,16 @@ import hpp from 'hpp';
 import morgan from 'morgan';
 import swaggerJSDoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
-import { NODE_ENV, PORT, LOG_FORMAT, ORIGIN, CREDENTIALS } from '@config';
+import { NODE_ENV, PORT, LOG_FORMAT, ORIGIN, CREDENTIALS } from './config';
 import { Routes } from '@interfaces/routes.interface';
-import { ErrorMiddleware } from '@middlewares/error.middleware';
-import { logger, stream } from '@utils/logger';
+// import { logger, stream } from '@utils/logger';
+import { ErrorMiddleware } from './middlewares/error.middleware';
+import { logger } from './utils/logger';
+
+// Add this block to catch uncaught exceptions
+process.on('uncaughtException', (error) => {
+  logger.error('Uncaught Exception:', error);
+});
 
 export class App {
   public app: express.Application;
@@ -24,7 +30,7 @@ export class App {
     this.env = NODE_ENV || 'development';
     this.port = PORT || 3000;
 
-    // this.initializeMiddlewares();
+    this.initializeMiddlewares();
     console.log('Initializing routes...');
     this.initializeRoutes(routes);
     console.log('Initializing Swagger...');    // this.initializeSwagger();
@@ -32,20 +38,12 @@ export class App {
   }
 
   public listen() {
-    try {p
-      this.app.listen(this.port);
-      console.log('Starting server...');
+    try {
       this.app.listen(this.port, () => {
-
-      // logger.info(`=================================`);
-      // logger.info(`======= ENV: ${this.env} =======`);
-      // logger.info(`🚀 App listening on the port ${this.port}`);
-      // logger.info(`=================================`);
-      // logger.info(this.env, this.port);
-      console.log(`=================================`);
-    });
-  } catch (error) {
-    console.log(error);
+        logger.info(`🚀 App listening on the port ${this.port}`);
+      });
+    } catch (error) {
+      logger.error('Error starting the server:', error);
     }
   }
 
@@ -55,7 +53,7 @@ export class App {
 
   private initializeMiddlewares() {
     try {
-
+      this.app.use(morgan(LOG_FORMAT));  // Add this line to log requests
       this.app.use(cors({ origin: ORIGIN, credentials: CREDENTIALS }));
       this.app.use(hpp());
       this.app.use(helmet());
@@ -69,6 +67,11 @@ export class App {
   }
 
   private initializeRoutes(routes: Routes[]) {
+    // Add this route to respond with "All good" at the root URL
+    this.app.get('/', (req, res) => {
+      res.send('All good');
+    });
+    
     routes.forEach(route => {
       this.app.use('/', route.router);
     });
