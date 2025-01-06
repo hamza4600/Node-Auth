@@ -36,6 +36,7 @@ const redisConfig = {
 };
 
 export const connectRedisClient = async (url: string, maxReconnectRetries = 5): Promise<RedisClient | undefined> => {
+  try {
   const existingClient = clientInstances[url];
 
   if (existingClient) {
@@ -53,7 +54,6 @@ export const connectRedisClient = async (url: string, maxReconnectRetries = 5): 
 
   client.on('ready', onRedisClientReady);
 
-  try {
     await client.connect();
     clientInstances[url] = client;
     return client;

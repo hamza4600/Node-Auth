@@ -19,24 +19,34 @@ export class App {
   public port: string | number;
 
   constructor(routes: Routes[]) {
+    console.log('Initializing app...');
     this.app = express();
     this.env = NODE_ENV || 'development';
     this.port = PORT || 3000;
 
-    this.initializeMiddlewares();
+    // this.initializeMiddlewares();
+    console.log('Initializing routes...');
     this.initializeRoutes(routes);
-    this.initializeSwagger();
+    console.log('Initializing Swagger...');    // this.initializeSwagger();
     this.initializeErrorHandling();
   }
 
   public listen() {
-    this.app.listen(this.port);
-    // this.app.listen(this.port, () => {
-    //   logger.info(`=================================`);
-    //   logger.info(`======= ENV: ${this.env} =======`);
-    //   logger.info(`🚀 App listening on the port ${this.port}`);
-    //   logger.info(`=================================`);
-    // });
+    try {p
+      this.app.listen(this.port);
+      console.log('Starting server...');
+      this.app.listen(this.port, () => {
+
+      // logger.info(`=================================`);
+      // logger.info(`======= ENV: ${this.env} =======`);
+      // logger.info(`🚀 App listening on the port ${this.port}`);
+      // logger.info(`=================================`);
+      // logger.info(this.env, this.port);
+      console.log(`=================================`);
+    });
+  } catch (error) {
+    console.log(error);
+    }
   }
 
   public getServer() {
@@ -44,14 +54,18 @@ export class App {
   }
 
   private initializeMiddlewares() {
-    this.app.use(morgan(LOG_FORMAT, { stream }));
-    this.app.use(cors({ origin: ORIGIN, credentials: CREDENTIALS }));
-    this.app.use(hpp());
-    this.app.use(helmet());
-    this.app.use(compression());
-    this.app.use(express.json());
-    this.app.use(express.urlencoded({ extended: true }));
-    this.app.use(cookieParser());
+    try {
+
+      this.app.use(cors({ origin: ORIGIN, credentials: CREDENTIALS }));
+      this.app.use(hpp());
+      this.app.use(helmet());
+      this.app.use(compression());
+      this.app.use(express.json());
+      this.app.use(express.urlencoded({ extended: true }));
+      this.app.use(cookieParser());
+    } catch (error) {
+      logger.error(error);
+    }
   }
 
   private initializeRoutes(routes: Routes[]) {

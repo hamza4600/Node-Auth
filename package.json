@@ -1,12 +1,14 @@
 {
-  "name": "classApp",
+  "name": "classapi",
   "version": "0.0.0",
   "description": "TypeScript + Prisma + MySQL + Express API Server",
   "author": "",
   "license": "ISC",
   "scripts": {
+    "dev": "concurrently \"npm run watch-compile\" \"npm run watch-dev\"",
+    "watch-compile": "swc src -w --out-dir dist",
+    "watch-dev": "nodemon --watch \"dist/**/*\" -e js ./dist/server.js",
     "start": "npm run build && cross-env NODE_ENV=production node dist/server.js",
-    "dev": "cross-env NODE_ENV=development nodemon",
     "build": "swc src -d dist --source-maps --copy-files",
     "build:tsc": "tsc && tsc-alias",
     "test": "jest --forceExit --detectOpenHandles",
@@ -22,7 +24,7 @@
     "schema": "src/prisma/schema.prisma"
   },
   "dependencies": {
-    "@prisma/client": "^4.1.0",
+    "@prisma/client": "^5.19.1",
     "@redis/client": "^1.5.14",
     "bcrypt": "^5.0.1",
     "class-transformer": "^0.5.1",
@@ -73,10 +75,10 @@
     "lint-staged": "^13.0.3",
     "node-config": "^0.0.2",
     "node-gyp": "^9.1.0",
-    "nodemon": "^2.0.19",
+    "nodemon": "^2.0.22",
     "pm2": "^5.2.0",
     "prettier": "^2.7.1",
-    "prisma": "^4.1.0",
+    "prisma": "^5.19.1",
     "supertest": "^6.2.4",
     "ts-jest": "^28.0.7",
     "ts-node": "^10.9.1",

@@ -17,6 +17,42 @@ model User {
   key          Key[]
   email    String @unique
   password String
+
+    organizationId          String?
+  organization            Organization?     @relation("organizationToUser", fields: [organizationId], references: [id], onDelete: Cascade)
+  // Admin Accounts
+  adminOrganizationId     String?
+  adminOrganization       Organization?     @relation("adminAccounts", fields: [adminOrganizationId], references: [id], onDelete: Cascade)
+  notes                   Note[]            @relation("CaseNote")
+  createdContacts         Contact[]         @relation("ContactCreatedBy")
+  createdGroups           ContactGroup[]    @relation("ContactGroupCreatedBy")
+  organizations           Organization[] // Change this line
+  cases                   Case[]
+  caseAttorney            Case[]            @relation("CaseAttorney")
+  intakeStaff             Case[]            @relation("IntakeStaff")
+  caseManager             Case[]            @relation("CaseManager")
+  caseHistory             CaseHistory[]
+  createdReports          CaseReport[]      @relation("ReportCreatedBy")
+  createdReportLogs       ReportLog[]       @relation("ReportLogCreatedBy")
+  createdStatements       CaseStatement[]   @relation("ReportCreatedBy")
+  createdStatementLogs    StatementLog[]    @relation("ReportLogCreatedBy")
+  createdCourts           Court[]
+  // new caller
+  callerLogs              CallerLog[]
+  newCallers              NewCaller[]
+  callerActionsCreated    CallerAction[]    @relation("CreatedByRelation")
+  callerActionsAssignedTo CallerAction[]    @relation("AssignedToRelation")
+  caseNegotiation         CaseNegotiation[]
+  events                  Event[]
+  actions                 Action[]          @relation("ActionToUser")
+  staffs                  Action[]          @relation("ActionToStaff")
+  recordRequest           RecordRequest[]
+  caseGroups              CaseGroup[]
+  discussionWith          DiscussionWith[]
+  discussion              Discussion[]
+  discussionCreatedBy     DiscussionItem[]
+  sentRequest             RecordExchange[]
+
 }
 model Session {
     id        String   @id
@@ -41,4 +77,1218 @@ model TechnologyEntity {
   url         String?
 
   @@map("technology")
+}
+
+
+// user Log 
+// case Status 
+enum CaseStatus {
+  Intake
+  New
+  PRE_SIGN_UP
+  SpecialsSentToCarrier
+  SendtoSuit
+  SummonsComplaintToBeReviewed
+  SummonsComplaintToBeVerified
+  SummonsComplaintApprovedToBeFiled
+  SummonsComplaintFiledAwaitingIndex
+  SummonsComplaintToBeServed
+  SummonsComplaintServedAwaitingAnswer
+  AllAnswersRecieved
+  PCRequested
+  PCScheduled
+  PCHeld
+  TrialJurySelection
+  Settlement
+  None
+}
+
+model Case {
+  caseId      String     @id @default(uuid())
+  caseType    String
+  caseStatus  CaseStatus
+  caseName    String
+  caseEmail   String     @unique //  email for case will be unique in the organization 
+  caseCreated DateTime   @default(now())
+
+  // fields neede for Summay Section
+  fileNumber        String?
+  intakeDate        DateTime?
+  openDate          DateTime?
+  fileLocation      String? // will be many files
+  retainer          String?
+  clientOffice      String?
+  facts             String?           @db.LongText
+  countyOfAccident  String?
+  addressOfLocation String?
+  dateOfAccident    DateTime?
+  stateOfAccident   String?
+  caseDescription   String?
+  liabilityMemo     String?           @db.LongText
+  settle            Boolean?
+  trailWatch        Boolean?
+  settleSynopsis    String?           @db.LongText
+  eLawLink          String?
+  updatedAt         DateTime          @updatedAt
+  caseCreatedById   String
+  caseCreatedBy     User              @relation(fields: [caseCreatedById], references: [id], onDelete: Cascade)
+  referredById      String?
+  referredBy        Contact?          @relation("ReferredByRelation", fields: [referredById], references: [id], onDelete: SetNull)
+  intakeStaffId     String?
+  intakeStaff       User?             @relation("IntakeStaff", fields: [intakeStaffId], references: [id], onDelete: SetNull)
+  organizationId    String
+  caseAttorney      User?             @relation("CaseAttorney", fields: [caseAttorneyId], references: [id], onDelete: SetNull)
+  caseAttorneyId    String?
+  caseManager       User?             @relation("CaseManager", fields: [caseManagerId], references: [id], onDelete: SetNull)
+  caseManagerId     String?
+  organization      Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  callerId          String? // New Caller tell us about the Caller from whic this case is created
+  caller            NewCaller?        @relation(fields: [callerId], references: [id], onDelete: SetNull)
+  caseNotes         Note[] // case will have multiple notes that will be 
+  caseEmailsList    Email[]
+  caseHistory       CaseHistory[]
+  caseReports       CaseReport[]
+  caseStatements    CaseStatement[]
+  caseContacts      ContactToCase[]
+  courts            CaseCourt[] // case will have their own contacts
+  costAndLine       CostAndLine[]
+  caseInsurance     CaseInsurance[]
+  caseCounsel       CaseCounsel[]
+  caseMedical       CaseMedical[]
+  caseClients       CaseClient[]
+  caseDefendants    CaseDefendant[]
+  caseNegotiation   CaseNegotiation[]
+  events            Event[]
+  actions           Action[]
+  recordRequests    RecordRequest[]
+  exchangeRecords   RecordExchange[]
+  caseGroupCases    CaseGroupCases[]
+  discussion        Discussion[]
+  deposition        Deposition[]
+  docketEmails      DocketEmail[]
+  caseDocuments     CaseDocuments[]
+
+  @@unique([caseId, organizationId])
+  @@unique([caseEmail, organizationId])
+  @@index([caseCreatedById], name: "caseCreatedById") // index for caseCreatedById
+}
+
+// Case Documents 
+model CaseDocuments {
+  id                String          @id @default(uuid())
+  caseId            String
+  case              Case            @relation(fields: [caseId], references: [caseId], onDelete: Cascade)
+  type              String
+  category          String
+  contacts          ContactToCase[]
+  name              String
+  summary           String?         @db.LongText
+  // from Share point other fields save as JSON
+  sharePoint        Json?           @db.Json
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  reportId          String? // on base of type we will have different fields 
+  discoveryEvidence Boolean?
+  reportAgentId     String?
+  reportAgent       ContactToCase?  @relation("ReportAgent", fields: [reportAgentId], references: [id], onDelete: SetNull)
+
+  recordRequest      RecordRequest?    @relation(fields: [recordRequestId], references: [id])
+  recordRequestId    String?
+  eventForClientId   String?
+  eventForAttorneyId String?
+  eventForClient     Event?            @relation("FilesForClient", fields: [eventForClientId], references: [id], onDelete: SetNull)
+  eventForAttorney   Event?            @relation("FilesForAttorney", fields: [eventForAttorneyId], references: [id], onDelete: SetNull)
+  counsels           CaseCounselLink[]
+}
+
+// case group 
+// we will have many cases in the group and a case single can be in many groups
+model CaseGroup {
+  id          String           @id @default(uuid())
+  name        String
+  cases       CaseGroupCases[]
+  createdBy   User             @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  createdById String
+  createdAt   DateTime         @default(now())
+}
+
+model CaseGroupCases {
+  id      String    @id @default(uuid())
+  caseId  String
+  groupId String
+  case    Case      @relation(fields: [caseId], references: [caseId], onDelete: Cascade)
+  group   CaseGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@unique([caseId, groupId])
+}
+
+// Pivot table for Case to Contact relationship
+enum SubContactType {
+  Client
+  Defendant
+  Medical
+  Insurance
+  Counsel
+}
+
+model ContactToCase {
+  id              String           @id @default(uuid())
+  caseId          String
+  contactId       String
+  type            SubContactType?
+  case            Case             @relation(fields: [caseId], references: [caseId], onDelete: Cascade)
+  contact         Contact          @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  caseInsurance   CaseInsurance[]
+  caseCounsel     CaseCounsel[]
+  settleLetter    SettleLetter[]
+  exchangeRecords RecordExchange[]
+  deposition      Deposition[]
+  caseDocumentId  String?
+  caseDocument    CaseDocuments?   @relation(fields: [caseDocumentId], references: [id])
+  reportAgentFor  CaseDocuments[]  @relation("ReportAgent")
+}
+
+// Cost and Line model
+model CostAndLine {
+  id             String       @id @default(uuid())
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  type           String
+  costCategory   String
+  amountDue      String
+  amountReduced  String
+  billTo         Contact?     @relation("BillToRelation", fields: [billToId], references: [id], onDelete: Cascade)
+  billToId       String?
+  Provider       Contact?     @relation("ProviderRelation", fields: [providerId], references: [id], onDelete: Cascade)
+  providerId     String?
+  description    String?      @db.LongText
+  // Lien paid 
+  lien           Boolean?
+  paid           Boolean?
+  case           Case         @relation(fields: [caseId], references: [caseId])
+  caseId         String
+  // connect it to org
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  organizationId String
+}
+
+// court Model
+model Court {
+  id             String       @id @default(uuid())
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  courtName      String
+  type           String?
+  location       String?
+  jurisdiction   String?
+  phone          String?
+  email          String?
+  website        String?
+  startTime      String?
+  endTime        String?
+  note           String?      @db.LongText
+  // no need 
+  plaintiff      String?
+  defendant      String?
+  caption        String?
+  courtPart      String?
+  indexNumber    String?
+  // we will have multiple judges in court
+  judges         CourtJudge[]
+  cases          CaseCourt[]
+  courtCreatedBy User         @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  createdById    String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+}
+
+model CourtJudge {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  court     Court?   @relation(fields: [courtId], references: [id], onDelete: Cascade)
+  courtId   String?
+  judge     Contact? @relation(fields: [judgeId], references: [id], onDelete: Cascade)
+  judgeId   String?
+}
+
+// Intermediate table for the many-to-many relationship
+model CaseCourt {
+  id              String   @id @default(uuid())
+  case            Case     @relation(fields: [caseId], references: [caseId])
+  caseId          String
+  court           Court?   @relation(fields: [courtId], references: [id], onDelete: SetNull)
+  courtId         String?
+  createdAt       DateTime @default(now())
+  plaintiff       String?
+  defendant       String?
+  caption         String?
+  courtPart       String?
+  indexNumber     String?
+  judgeAssigned   Contact? @relation(fields: [judgeAssignedId], references: [id], onDelete: SetNull)
+  judgeAssignedId String?
+  updatedAt       DateTime @updatedAt
+  events          Event[]
+}
+
+// case History
+model CaseHistory {
+  id            String         @id @default(uuid())
+  statusName    String?
+  statusNote    String?        @db.LongText // long text 
+  // user that created the case history
+  createdBy     User?          @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  createdById   String?
+  case          Case           @relation(fields: [caseId], references: [caseId], onDelete: Cascade)
+  caseId        String
+  action        LogActionType? // New field to track the action type
+  modelType     ModelType? // New field to track the model type
+  previousState Json? // New field to store previous state
+  newState      Json?
+  createdAt     DateTime       @default(now())
+}
+
+enum LogActionType {
+  CREATE
+  UPDATE
+  DELETE
+}
+
+enum ModelType {
+  CASE
+  NOTE
+  EMAIL
+  CASEREPORT
+  CASESTATEMENT
+  CASECONTACT
+  CASECOURT
+  COSTANDLINE
+  CASEINSURANCE
+  CASECOUNSEL
+  CASEMEDICAL
+  CASECLIENT
+  CASEDEFENDANT
+  CASENEGOTIATION
+  EVENT
+  ACTION
+  RECORDREQUEST
+  RECORDEXCHANGE
+  DISCUSSION
+  DEPOSITION
+  DOCKETEMAIL
+  SETTLELETTER
+  TREATMENTFORM
+  CASEDOCUMENT
+}
+
+model Organization {
+  id              String         @id @default(uuid())
+  handle          String         @unique
+  name            String
+  description     String?
+  Address         String?
+  phone           String?
+  website         String?
+  numberofMembers Int?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  cases           Case[]
+  createdBy       User           @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  createdById     String         @unique
+  members         User[]         @relation("organizationToUser") // members of the organization
+  adminAccounts   User[]         @relation("adminAccounts")
+  courts          Court[]
+  contacts        Contact[]      @relation("ContactToOrganization")
+  contactGroups   ContactGroup[] @relation("ContactGroupToOrganization")
+  costAndLine     CostAndLine[]
+  newCallers      NewCaller[]
+  companies       Company[]
+
+  @@unique([id, handle, createdById])
+  @@index([createdById], name: "createdById") // index for createdById
+}
+
+enum NoteType {
+  CaseNote
+  GENERAL
+  PHONECALL
+}
+
+// FOR CASE 
+// is like a timeline of case
+model Note {
+  id           String      @id @default(uuid())
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  noteHeadline String?
+  noteBody     String      @db.LongText
+  noteType     String // GENERAL, WILL DEFAULT ONE
+  noteTopics   String?
+  case         Case?       @relation(fields: [caseId], references: [caseId], onDelete: Cascade)
+  caseId       String?
+  // caseId       String
+  createdBy    User?       @relation("CaseNote", fields: [createdById], references: [id], onDelete: Cascade)
+  createdById  String?
+  // notes
+  caseReportId String?
+  caseReport   CaseReport? @relation(fields: [caseReportId], references: [id], onDelete: Cascade)
+
+  @@unique([id, createdById])
+}
+
+// Contact Model
+model Contact {
+  id                String           @id @default(uuid())
+  firstName         String
+  middleName        String?
+  lastName          String
+  Email             Json?            @db.Json
+  Phone             Json?            @db.Json
+  Address           Json?            @db.Json
+  officeType        String?
+  note              String?          @db.LongText
+  marketing         Boolean?
+  noContact         Boolean?
+  baron             Boolean?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  dateOfBirth       DateTime?
+  contactType       MianContactType?
+  organizationId    String?
+  contactCreatedBy  User             @relation("ContactCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+  createdById       String
+  organization      Organization?    @relation("ContactToOrganization", fields: [organizationId], references: [id], onDelete: Cascade)
+  companyID         String?
+  company           Company?         @relation(fields: [companyID], references: [id], onDelete: SetNull)
+  contactGroups     ContactToGroup[]
+  caseReport        CaseReport[]
+  statementMadeBy   CaseStatement[]
+  caseContacts      ContactToCase[]
+  BillToRelation    CostAndLine[]    @relation("BillToRelation")
+  providerCostLine  CostAndLine[]    @relation("ProviderRelation")
+  newCallers        NewCaller[]
+  courts            CourtJudge[]
+  caseInsurance     CaseInsurance[]
+  caseCounsel       CaseCounsel[]
+  caseMedical       CaseMedical[]
+  CaseClient        CaseClient[]
+  Defendant         CaseDefendant[]
+  caseJudge         CaseCourt[]
+  AttorneyToContact Event[]          @relation("AttorneyToContact")
+  JudgeToContact    Event[]          @relation("JudgeToContact")
+  CaseReferred      Case[]           @relation("ReferredByRelation")
+  NewCallerRefer          NewCaller[]       @relation("ReferredByRelation")
+}
+
+enum MianContactType {
+  Pier_Diem
+  In_House
+  CaseContact
+  General
+  Counsel
+  Court
+  Adjuster
+  Supervisor
+  Municipal_Defendant
+  Board_of_Education
+  Investigator
+  Medical
+  Attorney
+  Judge
+  ReferralSource
+}
+
+model ContactGroup {
+  id        String           @id @default(uuid())
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  name      String
+  // member of group 
+  members   ContactToGroup[]
+
+  contactGroupCreatedBy User          @relation("ContactGroupCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+  createdById           String
+  organization          Organization? @relation("ContactGroupToOrganization", fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId        String?
+}
+
+model ContactToGroup {
+  contactId String
+  groupId   String
+  contact   Contact      @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  group     ContactGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@id([contactId, groupId])
+}
+
+// Email that will be saved in the database from Send Grid
+model Email {
+  id          String       @id @default(uuid())
+  createdAt   DateTime     @default(now())
+  from        String
+  to          String
+  cc          String
+  subject     String
+  text        String?      @db.LongText // add as much text as possible 
+  caseEmail   String?
+  case        Case?        @relation(fields: [caseId], references: [caseId], onDelete: SetNull)
+  caseId      String?
+  category    String?
+  attachments Attachment[]
+}
+
+model Attachment {
+  id            String       @id @default(uuid())
+  createdAt     DateTime     @default(now())
+  url           String
+  name          String
+  email         Email?       @relation(fields: [emailId], references: [id], onDelete: Cascade)
+  emailId       String?
+  docketEmail   DocketEmail? @relation(fields: [docketEmailId], references: [id], onDelete: Cascade)
+  docketEmailId String?
+}
+
+model DocketEmail {
+  id          String       @id @default(uuid())
+  createdAt   DateTime     @default(now())
+  from        String
+  to          String
+  cc          String
+  subject     String
+  text        String?      @db.LongText // add as much text as possible 
+  docketEmail String?
+  case        Case?        @relation(fields: [caseId], references: [caseId], onDelete: SetNull)
+  caseId      String?
+  category    String?
+  attachments Attachment[]
+  isRead      Boolean?     @default(false)
+  phrasedText String?      @db.LongText
+  isArchived  Boolean      @default(false)
+}
+
+// report Model that will be link to the case
+model CaseReport {
+  id              String      @id @default(uuid())
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  name            String
+  reportType      String
+  // files that are uploaded they will many files
+  files           File[]
+  // repoert Notes
+  reportNotes     Note[]
+  reportId        String // added by user
+  reportCreatedBy User        @relation("ReportCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+  createdById     String
+  case            Case?       @relation(fields: [caseId], references: [caseId], onDelete: Cascade)
+  caseId          String?
+  reportLogs      ReportLog[]
+  // report Agent that will from contact 
+  reportAgent     Contact?    @relation(fields: [reportAgentId], references: [id], onDelete: Cascade)
+  reportAgentId   String?
+}
+
+// report Log Model
+model ReportLog {
+  id                 String     @id @default(uuid())
+  createdAt          DateTime   @default(now())
+  note               String
+  reportLogType      String
+  reportLogCreatedBy User       @relation("ReportLogCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+  createdById        String
+  caseReportId       String
+  caseReport         CaseReport @relation(fields: [caseReportId], references: [id], onDelete: Cascade)
+}
+
+model File {
+  id          String         @id @default(uuid())
+  createdAt   DateTime       @default(now())
+  url         String
+  // report that the file is link to
+  report      CaseReport?    @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  reportId    String?
+  // statement that the file is link to
+  statement   CaseStatement? @relation(fields: [statementId], references: [id], onDelete: Cascade)
+  statementId String?
+}
+
+// Statement of the case
+model CaseStatement {
+  id                  String         @id @default(uuid())
+  createdAt           DateTime       @default(now())
+  notes               String // will be many Paragraphs
+  type                String?
+  files               File[]
+  // Entered into Discovery Evidence with Court BOOLEAN / when selected
+  inDiscoveryEvidence Boolean?
+  // Statement Made By Contact
+  statementMadeBy     Contact?       @relation(fields: [statementMadeById], references: [id], onDelete: Cascade)
+  statementMadeById   String?
+  createdBy           User           @relation("ReportCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+  createdById         String
+  case                Case?          @relation(fields: [caseId], references: [caseId], onDelete: Cascade)
+  caseId              String?
+  logs                StatementLog[]
+}
+
+model StatementLog {
+  id              Int           @id @default(autoincrement())
+  caseStatement   CaseStatement @relation(fields: [caseStatementId], references: [id], onDelete: Cascade)
+  caseStatementId String
+  // User who made the change
+  createdBy       User          @relation("ReportLogCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+  createdById     String
+  // Details of the change (e.g., updated fields, changes made)
+  changeDetails   String
+  // Timestamp of when the change occurred
+  createdAt       DateTime      @default(now())
+}
+
+// new caller model
+model NewCaller {
+  id           String   @id @default(uuid())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  firstName    String
+  lastName     String
+  contact      Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  contactId    String?
+  address1     String?
+  address2     String?
+  city         String?
+  province     String?
+  postalCode   String?
+  phone        String?
+  email        String?
+  referredBy   Contact?    @relation("ReferredByRelation", fields: [referredById], references: [id], onDelete: SetNull)
+  referredById String?
+
+  timeOfAccident           String?
+  removedByAmbulance       Boolean?
+  visitedEmergencyRoom     Boolean?
+  privateInsuranceMedicaid String?
+  reppedByAttorney         Boolean?
+  typeOfAccident           String?
+  status                   String?
+  locationOfAccident       String?
+  lostTimeFromWork         String?
+  injuryDescription        String?        @db.LongText
+  employInfo               String?        @db.LongText
+  witnessInfo              String?        @db.LongText
+  additionalInfo           String?        @db.LongText
+  privateHealthInsurance   String?        @db.LongText
+  priorAccidents           String?        @db.LongText
+  policeReported           String?
+  followUpDoctor           String?
+  anyWitness               String?
+  // will be converted to case
+  logs                     CallerLog[]
+  createdBy                User           @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  createdById              String
+  organization             Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId           String
+  CallerAction             CallerAction[]
+  case                     Case[]
+}
+
+model CallerLog {
+  id        String    @id @default(uuid())
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  callerId  String
+  caller    NewCaller @relation(fields: [callerId], references: [id], onDelete: Cascade)
+  content   String    @db.LongText
+  details   String?
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// AC
+enum ActionType {
+  FollowUp
+  Call
+  Email
+  Meeting
+  Other
+}
+
+model CallerAction {
+  id           String    @id @default(uuid())
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  callerId     String
+  caller       NewCaller @relation(fields: [callerId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User      @relation("CreatedByRelation", fields: [userId], references: [id], onDelete: Cascade)
+  assignedTo   User?     @relation("AssignedToRelation", fields: [assignedToId], references: [id], onDelete: Cascade)
+  assignedToId String?
+  type         String?
+  description  String?
+  status       Boolean
+  dueDate      DateTime?
+}
+
+// case insurance tab 
+enum CaseInsuranceType {
+  Auto
+  Home
+  Health
+  Life
+  Disability
+  Business
+  Renters
+  Other
+}
+
+enum messageTemplateType {
+  Template1
+  Template2
+  Template3
+  Template4
+}
+
+enum occuranceSending {
+  None
+  Daily
+  Weekly
+  Monthly
+  Quarterly
+}
+
+model CaseInsurance {
+  id              String             @id @default(uuid())
+  nameId          String?
+  name            Contact?           @relation(fields: [nameId], references: [id], onDelete: Cascade)
+  claimNumber     String?
+  type            CaseInsuranceType?
+  policyLimits    String?
+  policyNumber    String?
+  partytId        String? // WILL BE Case CONTACT
+  party           ContactToCase?     @relation(fields: [partytId], references: [id], onDelete: SetNull)
+  caseId          String
+  case            Case               @relation(fields: [caseId], references: [caseId], onDelete: Cascade)
+  createdAt       DateTime           @default(now())
+  settletter      SettleLetter[]
+  caseNegotiation CaseNegotiation[]
+}
+
+// Junction model for many-to-many relationship
+model CaseCounselLink {
+  id             String        @id @default(uuid())
+  caseDocumentId String
+  caseDocument   CaseDocuments @relation(fields: [caseDocumentId], references: [id], onDelete: Cascade)
+  caseCounselId  String
+  caseCounsel    CaseCounsel   @relation(fields: [caseCounselId], references: [id], onDelete: Cascade)
+
+  @@unique([caseDocumentId, caseCounselId])
+}
+
+// counsel model
+enum CounselRole {
+  DefenseCounsel
+  DefenseCounselPartner
+  SupervisingAttorney
+  CourtAttorney
+  Other
+}
+
+model CaseCounsel {
+  id              String            @id @default(uuid())
+  nameId          String?
+  name            Contact?          @relation(fields: [nameId], references: [id], onDelete: SetNull)
+  filenumber      String?
+  role            CounselRole?
+  policyLimits    String?
+  policyNumber    String?
+  partytId        String? // WILL BE Case CONTACT
+  party           ContactToCase?    @relation(fields: [partytId], references: [id], onDelete: SetNull)
+  caseId          String
+  case            Case              @relation(fields: [caseId], references: [caseId], onDelete: Cascade)
+  createdAt       DateTime          @default(now())
+  settletter      SettleLetter[]
+  caseNegotiation CaseNegotiation[]
+  deposition      Deposition[]
+  documents       CaseCounselLink[]
+}
+
+// settle letter model
+model SettleLetter {
+  id               String              @id @default(uuid())
+  createdAt        DateTime            @default(now())
+  partytId         String // WILL BE Case CONTACT with type client
+  party            ContactToCase       @relation(fields: [partytId], references: [id], onDelete: Cascade)
+  caseCounselId    String?
+  caseCounsel      CaseCounsel?        @relation(fields: [caseCounselId], references: [id], onDelete: Cascade)
+  caseInsuranceId  String?
+  caseInsurance    CaseInsurance?      @relation(fields: [caseInsuranceId], references: [id], onDelete: Cascade)
+  messageTemplate  messageTemplateType // it will be enum
+  occuranceSending occuranceSending
+}
+
+// case medical model
+enum MedicalRole {
+  TREATING_PHYSICIAN
+  ER_NURSE
+  GENERAL_PHYSICIAN
+}
+
+model CaseMedical {
+  id            String          @id @default(uuid())
+  nameId        String?
+  name          Contact?        @relation(fields: [nameId], references: [id], onDelete: SetNull)
+  patientId     String?
+  patient       CaseClient?     @relation(fields: [patientId], references: [id], onDelete: SetNull)
+  role          MedicalRole?
+  fileNumber    String?
+  caseId        String
+  case          Case            @relation(fields: [caseId], references: [caseId], onDelete: Cascade)
+  createdAt     DateTime        @default(now())
+  recordRequest RecordRequest[]
+}
+
+// company 
+model Company {
+  id           String       @id @default(uuid())
+  name         String
+  address      String
+  phone        String?
+  email        String?
+  createdAt    DateTime     @default(now())
+  orgId        String
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  contacts     Contact[]
+}
+
+// case client
+
+enum ClientRole {
+  MINOR
+}
+
+enum TreatmentTracker {
+  ACTIVE_MONTHLY
+  INACTIVE
+  ACTIVE
+  MONTHLY
+  QUARTERLY
+}
+
+enum PreferredTxTk {
+  EMAIL
+}
+
+model CaseClient {
+  id               String            @id @default(uuid())
+  contactId        String
+  name             Contact           @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  retainerNo       String? // Retainer Number
+  injury           String?           @db.LongText
+  createdAt        DateTime          @default(now())
+  closingNo        String? // Closing Number
+  ssn              String?           @db.LongText
+  caseId           String
+  case             Case              @relation(fields: [caseId], references: [caseId], onDelete: Cascade)
+  role             ClientRole?       @default(MINOR)
+  treatmentTracker TreatmentTracker? @default(INACTIVE)
+  preferredTxTk    PreferredTxTk?    @default(EMAIL)
+  recordsRequest   RecordRequest[]
+  ClientToEvent    Event[]           @relation("ClientToEvent")
+  PartyToEvent     Event[]           @relation("PartyToEvent")
+  treatmentForms   TreatmentForm[] // Relation to multiple settlement forms
+  caseMedical      CaseMedical[]
+}
+
+enum Medication {
+  YITP
+  YITPOC
+  YITOC
+  NIDTM
+}
+
+model TreatmentForm {
+  id           String     @id @default(uuid())
+  caseClientId String
+  caseClient   CaseClient @relation(fields: [caseClientId], references: [id], onDelete: Cascade)
+  status       String?
+
+  newDiagnosis         Boolean?
+  descriptionDiagnosis String?     @db.LongText
+  medication           Medication?
+  medicationArray      Json?       @db.Json // this will be like parent Name the arrays because we have variontion on base of medication
+  medicanOTC           Json?       @db.Json // this will be like parent Name the arrays because we have variontion on base of medication
+
+  dateOfPhysicalTherapy      DateTime?
+  frequenceOfPhysicalTherapy String?
+  duration                   String?
+  purpose                    String?
+  lastDateOfDoctor           DateTime?
+  provideDoctorVisit         String?   @db.LongText
+  receivedInjection          String?   @db.LongText
+  injectionInfo              String?   @db.LongText
+  hadSurgery                 String?
+  surgeryInfo                String?   @db.LongText
+  surgeryArray               Json?     @db.Json
+  injectionArray             Json?     @db.Json
+
+  expensesToInjury     String? @db.LongText
+  medicalDevicesInjury String? @db.LongText
+
+  currentlyEmployed        Boolean?
+  statusChangDueToInjury   Boolean?
+  lostWageDueToInjury      Boolean?
+  appliedForSocialSecurity Boolean?
+  receivingMedicaid        Boolean?
+  receivingWorkComp        Boolean?
+  receivingWorkersComp     Boolean?
+  receivMAP                Boolean?
+
+  additionInfo  String?  @db.LongText
+  painLevel     String?
+  qualityOfLife String?
+  abilityToWork String?
+  conformData   Boolean?
+  createdAt     DateTime @default(now())
+}
+
+// case Defendant
+enum DefendantRole {
+  DEFENDANT
+  OWNER_OPERATOR
+  OPERATOR
+  OWNER
+  PROPERTY_OWNER
+  MANAGEMENT_COMPANY
+}
+
+model CaseDefendant {
+  id                       String        @id @default(uuid())
+  contactId                String?
+  name                     Contact?      @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  socialMedia              Json?         @db.Json
+  role                     DefendantRole @default(DEFENDANT)
+  caseId                   String
+  case                     Case          @relation(fields: [caseId], references: [caseId], onDelete: Cascade)
+  dateComplaintFiled       DateTime? // The date the complaint was filed
+  dateEffectiveServiceMade DateTime? // The date service was effectively made
+  serviceType              String? // Type of service
+  dateAnswered             DateTime? // Date the defendant answered the complaint
+  createdAt                DateTime      @default(now())
+}
+
+// Case Negotiation 
+enum NegotiationType {
+  ClientAuthorize
+  ClientMinimum
+  CounterDemand
+  CounterOffer
+  Demand
+  InitialDemand
+  InitialOffer
+  Offer
+  PreClientOffer
+  Settlement
+}
+
+// negotiationWith  Case counsel or case insurance
+model CaseNegotiation {
+  id          String           @id @default(uuid())
+  counselId   String?
+  counsel     CaseCounsel?     @relation(fields: [counselId], references: [id], onDelete: SetNull)
+  insuranceId String?
+  insurance   CaseInsurance?   @relation(fields: [insuranceId], references: [id], onDelete: SetNull)
+  amount      String
+  note        String           @db.LongText
+  type        NegotiationType?
+  staffId     String
+  staff       User             @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  caseId      String
+  case        Case             @relation(fields: [caseId], references: [caseId], onDelete: Cascade)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+// EVENTS 
+enum EventType {
+  Hearing
+  Mediation
+  Deposition
+  Conference
+  PreliminaryConference
+  PreTrialConference
+  Trial_JurySelection
+  ExaminationUnderOath
+  // we will add more 
+}
+
+enum EventStatus {
+  Pending
+  Completed
+  Cancelled
+  Adjourned
+  AdjournedWithoutDate
+}
+
+model Event {
+  id                 String          @id @default(uuid())
+  name               String
+  status             EventStatus?
+  start              DateTime
+  end                DateTime
+  description        String?         @db.LongText
+  location           String?
+  type               EventType?
+  attorneyAppearance Boolean?
+  clientAppearance   Boolean?
+  appearance         String?         @db.LongText //note
+  startFromScott     String?         @db.LongText
+  clientNote         String?         @db.LongText
+  attorneyId         String? //  type attorney
+  attorney           Contact?        @relation("AttorneyToContact", fields: [attorneyId], references: [id], onDelete: SetNull)
+  partyId            String? // case contact
+  party              CaseClient?     @relation("PartyToEvent", fields: [partyId], references: [id], onDelete: SetNull)
+  clientId           String? // client case contact
+  client             CaseClient?     @relation("ClientToEvent", fields: [clientId], references: [id], onDelete: SetNull)
+  filesForClient     CaseDocuments[] @relation("FilesForClient", map: "FilesForClient_fkey")
+  filesForAttorney   CaseDocuments[] @relation("FilesForAttorney", map: "FilesForAttorney_fkey")
+
+  courtId String? // case court 
+  court   CaseCourt? @relation(fields: [courtId], references: [id], onDelete: SetNull)
+  judgeId String? // court judge
+  judge   Contact?   @relation("JudgeToContact", fields: [judgeId], references: [id], onDelete: SetNull)
+
+  // optional on base of type 
+  partyDeposed      String? // case contact
+  attorneyAppearing String? // case attorney
+  reliefSought      String? // enum
+  argumentType      String? // enum
+  returnDate        DateTime?
+
+  caseId    String?
+  case      Case?            @relation(fields: [caseId], references: [caseId], onDelete: SetNull)
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  actions   Action[]
+  sequence  SequenceAction[]
+}
+
+enum ACTIONTYPE {
+  CaseUpdate
+  MotionPreparation
+  MotionFiling
+  SuitDiscussion
+  ClientConsultation
+  DocumentReview
+  DiscoveryRequest
+  DiscoveryResponse
+  DepositionPreparation
+  DepositionAttendance
+  WitnessInterview
+  EvidenceCollection
+  LegalResearch
+  BriefWriting
+  CourtAppearance
+  SettlementNegotiation
+  MediationPreparation
+  MediationAttendance
+  TrialPreparation
+  ExhibitPreparation
+  JurySelection
+  OpeningStatementPreparation
+  WitnessExaminationPreparation
+  ClosingArgumentPreparation
+  PostTrialMotion
+  AppealPreparation
+  CaseStrategySession
+  ExpertWitnessConsultation
+  BillingAndInvoicing
+  CaseStatusReport
+}
+
+enum ACTIONSTATUS {
+  NeedHelp
+  Incomplete
+  Completed
+  NeedsRevision
+  InProgress
+}
+
+model Action {
+  id          String           @id @default(uuid())
+  staffId     String
+  staff       User             @relation("ActionToStaff", fields: [staffId], references: [id], onDelete: Cascade)
+  userId      String?
+  user        User?            @relation("ActionToUser", fields: [userId], references: [id], onDelete: Cascade)
+  dueDate     DateTime // like from may 18 to 20
+  header      String
+  description String?          @db.LongText
+  type        ACTIONTYPE
+  status      ACTIONSTATUS?
+  eventID     String?
+  event       Event?           @relation(fields: [eventID], references: [id], onDelete: SetNull)
+  caseId      String?
+  case        Case?            @relation(fields: [caseId], references: [caseId], onDelete: Cascade)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  // sequence of action
+  sequence    SequenceAction[]
+}
+
+// Sequence of Action
+model Sequence {
+  id        Int              @id @default(autoincrement())
+  name      String
+  actions   SequenceAction[]
+  createdAt DateTime         @default(now())
+  isDefault Boolean?         @default(true)
+}
+
+model SequenceAction {
+  id          Int      @id @default(autoincrement())
+  sequenceId  Int
+  sequence    Sequence @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
+  actionId    String?
+  action      Action?  @relation(fields: [actionId], references: [id], onDelete: Cascade)
+  eventId     String?
+  event       Event?   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  position    Int
+  isActive    Boolean  @default(false) // true then we are working or is under work 
+  isCompleted Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@unique([sequenceId, actionId])
+}
+
+// RecordRequest 
+enum RecordType {
+  MedicalRequest
+}
+
+enum RecordMethod {
+  CIOX
+  Verisma
+  Mail
+  Phone
+  Fax
+}
+
+model RecordRequest {
+  id             String                @id @default(uuid())
+  clientId       String? // case client for 
+  client         CaseClient?           @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  caseId         String
+  case           Case                  @relation(fields: [caseId], references: [caseId], onDelete: Cascade)
+  type           RecordType
+  status         RecordExchangeStatus?
+  providerId     String? // case Medical 
+  provider       CaseMedical?          @relation(fields: [providerId], references: [id], onDelete: SetNull)
+  method         RecordMethod
+  start          DateTime
+  end            DateTime
+  info           String?               @db.LongText
+  notes          String?               @db.LongText
+  // documents      Json?                 @db.Json // array of documents
+  documents      CaseDocuments[]
+  requestedById  String? //  User Logged IN
+  requestedBy    User?                 @relation(fields: [requestedById], references: [id], onDelete: SetNull)
+  treatmentDates Json?                 @db.Json // *Array of Calendar Dates ??
+  createdAt      DateTime              @updatedAt
+}
+
+enum RecordExchangeStatus {
+  OPEN
+  EXCHANGE
+  OBTAINED
+}
+
+model RecordExchange {
+  id          String                @id @default(uuid())
+  caseId      String
+  case        Case                  @relation(fields: [caseId], references: [caseId], onDelete: Cascade)
+  sendToId    String? // array case contact || org contact counsel , medical and insureance
+  sendTo      ContactToCase?        @relation(fields: [sendToId], references: [id], onDelete: SetNull)
+  // type        String?
+  sentMethod  String?
+  sentById    String?
+  sentBy      User?                 @relation(fields: [sentById], references: [id], onDelete: SetNull)
+  requestDate Json?                 @db.Json // array of dates
+  description String?               @db.LongText
+  documents   Json?                 @db.Json // array of documents
+  status      RecordExchangeStatus?
+  createdAt   DateTime              @updatedAt
+}
+
+// discussion 
+model Discussion {
+  id          String           @id @default(uuid())
+  type        String
+  status      String?
+  subject     String           @db.LongText
+  with        DiscussionWith[] // array of users
+  items       DiscussionItem[] // array of discussion items
+  caseId      String
+  case        Case             @relation(fields: [caseId], references: [caseId], onDelete: Cascade)
+  createdBy   User             @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  createdById String
+  createdAt   DateTime         @default(now())
+}
+
+model DiscussionWith {
+  id           String     @id @default(uuid())
+  discussion   Discussion @relation(fields: [discussionId], references: [id], onDelete: Cascade)
+  discussionId String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId       String
+}
+
+model DiscussionItem {
+  id           Int                @id @default(autoincrement())
+  discussion   Discussion         @relation(fields: [discussionId], references: [id], onDelete: Cascade)
+  discussionId String
+  type         DiscussionItemType
+  content      Json? // snapshot of the content
+  createdAt    DateTime           @default(now())
+  position     Int
+  createdBy    User?              @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  createdById  String?
+}
+
+enum DiscussionItemType {
+  NOTE
+  ACTION
+  EVENT
+  EMAIL
+  NEGOTIATION
+  CONTACT
+  MESSAGE
+  STATUS
+  TREATMENT // treatment form response
+}
+
+// deposition
+model Deposition {
+  id                String           @id @default(uuid())
+  // deposingParty // we can get that from witnessName 
+  // witnessName   String?// caseContact
+  witnessId         String? // caseContact
+  witness           ContactToCase?   @relation(fields: [witnessId], references: [id], onDelete: SetNull)
+  attorneyWitnessId String? // that are Case counsel 
+  attorneyWitness   CaseCounsel?     @relation(fields: [attorneyWitnessId], references: [id], onDelete: SetNull)
+  date              DateTime
+  location          String
+  status            DepositionStatus
+  notes             String?          @db.LongText
+  transcript        String?
+  interpreter       Boolean?
+  caseId            String
+  case              Case             @relation(fields: [caseId], references: [caseId], onDelete: Cascade)
+  createdAt         DateTime         @default(now())
+}
+
+enum DepositionStatus {
+  NEEDS_SCHEDULE
+  SCHEDULED
+  ADJOURNED
+  HELD
+  NEEDS_CONTINUED
 }
